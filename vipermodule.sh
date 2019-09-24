@@ -26,12 +26,12 @@ class ${MODULE}ViewController: UIViewController {
 	var presenter: ${MODULE}ViewOutput!
 
 	override func viewDidLoad() {
-		view.translatesAutoresizingMaskIntoConstraints = false;
+		view.translatesAutoresizingMaskIntoConstraints = false
 	}
 }
 
 extension ${MODULE}ViewController: ${MODULE}ViewInput {
-	
+
 }
 EOF
 
@@ -50,7 +50,7 @@ class ${MODULE}Interactor {
 }
 
 extension ${MODULE}Interactor: ${MODULE}InteractorInput {
-	
+
 }
 EOF
 
@@ -67,19 +67,20 @@ import Foundation
 class ${MODULE}Presenter {
 	weak var view: ${MODULE}ViewInput!
 	var interactor: ${MODULE}InteractorInput!
+	var router: ${MODULE}RouterInput!
 	weak var output: ${MODULE}ModuleOutput!
 }
 
 extension ${MODULE}Presenter: ${MODULE}ModuleInput {
-	
+
 }
 
 extension ${MODULE}Presenter: ${MODULE}InteractorOutput {
-	
+
 }
 
 extension ${MODULE}Presenter: ${MODULE}ViewOutput {
-	
+
 }
 EOF
 
@@ -92,16 +93,25 @@ cat << EOF > ${MODULE}Assembly.swift
 //
 
 class ${MODULE}Assembly {
-	static func setup(_ viewController: ${MODULE}ViewController, delegate: ${MODULE}ModuleOutput) -> ${MODULE}ModuleInput {
+	static let storyboard = "${MODULE}"
+
+	@discardableResult static func setup(_ viewController: ${MODULE}ViewController, delegate: ${MODULE}ModuleOutput? = nil) -> ${MODULE}ModuleInput {
 		let presenter = ${MODULE}Presenter()
 		let interactor = ${MODULE}Interactor()
+		let router = ${MODULE}Router()
 
 		viewController.presenter = presenter
 		interactor.presenter = presenter
 		presenter.view = viewController
 		presenter.interactor = interactor
-		presenter.output = delegate;
-		return presenter;
+		presenter.router = router
+		presenter.output = delegate
+		router.viewController = viewController
+		return presenter
+	}
+
+	static func create() -> ${MODULE}ViewController {
+		return UIStoryboard(name: "${MODULE}", bundle: .main).instantiateInitialViewController() as! ${MODULE}ViewController
 	}
 }
 EOF
@@ -115,27 +125,56 @@ cat << EOF > ${MODULE}Contract.swift
 //
 
 protocol ${MODULE}ModuleInput: class {
-	
+
 }
 
 protocol ${MODULE}ModuleOutput: class {
-	
+
 }
 
 protocol ${MODULE}ViewInput: class {
-	
+
 }
 
 protocol ${MODULE}ViewOutput: class {
-	
+
 }
 
 protocol ${MODULE}InteractorInput: class {
-	
+
 }
 
 protocol ${MODULE}InteractorOutput: class {
-	
+
+}
+
+protocol ${MODULE}RouterInput {
+	func unwindBack(_ completion: (() -> Void)?)
+	func unwindBack()
+}
+
+extension ${MODULE}RouterInput {
+	func unwindBack() { unwindBack(nil) }
+}
+EOF
+
+echo "${MODULE}Router..."
+
+cat << EOF > ${MODULE}Router.swift
+//
+//  Viper Module
+//  ${MODULE}Router.swift
+//
+
+class ${MODULE}Router: ${MODULE}RouterInput {
+	weak var viewController: UIViewController!
+
+	func unwindBack(_ completion: (() -> Void)?) {
+		CATransaction.begin()
+		CATransaction.setCompletionBlock(completion)
+		viewController.navigationController?.popViewController(animated: true)
+		CATransaction.commit()
+	}
 }
 EOF
 
